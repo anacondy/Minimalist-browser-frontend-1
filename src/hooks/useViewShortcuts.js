@@ -1,64 +1,106 @@
 /**
- * useViewShortcuts — global keyboard bindings.
+ * useViewShortcuts — universal (browser-style) keyboard bindings.
  * ------------------------------------------------------------------
- *   CTRL/CMD + K   focus the search dock (closes Settings if open;
- *                  keeps the current view for live filtering)
- *   CTRL/CMD + ,   open Settings
- *   CTRL/CMD + H   open History
- *   CTRL/CMD + B   open Bookmarks
- *   ESC            return to the MAIN view
+ *   CTRL/CMD + L        focus the URL/search dock
+ *   CTRL/CMD + K        focus the filter/search dock (any view)
+ *   ALT + ← / ALT + →   navigate back / forward in view history
+ *   CTRL + R            soft refresh (reset filter + scroll)
+ *   CTRL + SHIFT + R    hard refresh (reload app)
+ *   CTRL + TAB          next view   ·  CTRL + SHIFT + TAB  previous view
+ *   CTRL/CMD + H        history · CTRL/CMD + B bookmarks · CTRL/CMD + , config
+ *   ESC                 clear field, else close back to home
  *
  * CMD is treated like Ctrl so macOS users get identical behaviour.
- * The listener is bound once and reads the freshest callbacks through
- * a ref → no re-binding on every keystroke or render.
+ * The listener is bound once and reads the freshest callback through
+ * a ref → no re-binding per keystroke or render.
+ *
+ * NOTE (real-browser caveat): top-level browsers reserve Ctrl+Tab and
+ * Alt+←/→ for their own chrome, so an embedded page may not receive
+ * them. They become fully available once this front-end runs inside a
+ * desktop shell (Tauri/Electron/CEF) where we own the shortcut table.
  */
 import { useEffect, useRef } from 'react';
 
-export function useViewShortcuts({ onShortcut, onFocusSearch, searchInputRef }) {
-  // Keep the latest callbacks without re-binding the window listener.
+export function useViewShortcuts({ onAction, searchInputRef }) {
+  // Keep the latest callback without re-binding the window listener.
   // The ref is only touched inside an effect (React 19 lint rule) so
   // the listener always sees the freshest closures.
-  const handlersRef = useRef({ onShortcut, onFocusSearch });
-
+  const actionRef = useRef(onAction);
   useEffect(() => {
-    handlersRef.current = { onShortcut, onFocusSearch };
+    actionRef.current = onAction;
   });
 
   useEffect(() => {
     /** @param {KeyboardEvent} e */
     const handleKeyDown = (e) => {
       const mod = e.ctrlKey || e.metaKey;
-      const key = e.key.toLowerCase();
+      const key = e.key;
+      const lower = key.toLowerCase();
+      const fire = (action) => actionRef.current?.(action);
 
-      // CTRL/CMD + K — always focus the search dock.
-      if (mod && key === 'k') {
+      // --- Modifier combos (browser-level chrome shortcuts) ---
+      if (mod && key === 'Tab') {
         e.preventDefault();
-        handlersRef.current.onFocusSearch?.();
-        searchInputRef.current?.focus();
-        searchInputRef.current?.select();
+        fire(e.shiftKey ? 'prev-view' : 'next-view');
+        return;
+      }
+      if (mod && e.shiftKey && lower === 'r') {
+        e.preventDefault();
+        fire('hard-refresh');
+        return;
+      }
+      if (mod && lower === 'r') {
+        e.preventDefault();
+        fire('refresh');
+        return;
+      }
+      if (mod && (lower === 'l' || lower === 'k')) {
+        // L = URL/search bar · K = filter/search dock — same input.
+        e.preventDefault();
+        fire('focus-search');
+        return;
+      }
+      if (mod && lower === ',') {
+        e.preventDefault();
+        fire('open-settings');
+        return;
+      }
+      if (mod && lower === 'h') {
+        e.preventDefault();
+        fire('open-history');
+        return;
+      }
+      if (mod && lower === 'b') {
+        e.preventDefault();
+        fire('open-bookmarks');
         return;
       }
 
-      // Text fields manage their own Enter/Escape (submit / blur).
-      const target = e.target;
-      const isField =
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement;
-      if (isField && (e.key === 'Escape' || e.key === 'Enter')) return;
+      // --- Alt navigation (back / forward) ---
+      if (e.altKey && key === 'ArrowLeft') {
+        e.preventDefault();
+        fire('back');
+        return;
+      }
+      if (e.altKey && key === 'ArrowRight') {
+        e.preventDefault();
+        fire('forward');
+        return;
+      }
 
-      // Owned view shortcuts (modifier combos are never hijacked from
-      // a field — they're browser-safe here and rare in inputs).
-      if (mod && key === ',') {
-        e.preventDefault();
-        handlersRef.current.onShortcut?.('settings');
-      } else if (mod && key === 'h') {
-        e.preventDefault();
-        handlersRef.current.onShortcut?.('history');
-      } else if (mod && key === 'b') {
-        e.preventDefault();
-        handlersRef.current.onShortcut?.('bookmarks');
-      } else if (e.key === 'Escape') {
-        handlersRef.current.onShortcut?.('main');
+      // --- Escape: clear the field first, close the view second ---
+      if (key === 'Escape') {
+        const target = e.target;
+        const isField =
+          target instanceof HTMLInputElement ||
+          target instanceof HTMLTextAreaElement;
+
+        if (isField && target.value) {
+          // First Esc in a field: clear it, keep the panel open.
+          fire('clear-search');
+          return;
+        }
+        fire('close');
       }
     };
 

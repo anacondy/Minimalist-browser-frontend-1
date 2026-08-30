@@ -11,11 +11,19 @@
 import { openExternalUrl, prettifyUrl, resolveHistoryTarget } from '../utils.js';
 
 /**
- * @param {{ items: Array<{id:number,role:string,name:string,isActive:boolean}> }} props
+ * @param {{
+ *   items: Array<{id:number,role:string,name:string,isActive:boolean}>,
+ *   onBack: () => void,
+ * }} props
  */
-export default function HistoryView({ items }) {
+export default function HistoryView({ items, onBack }) {
   return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center px-4 pb-44 pt-28">
+    // Blank-area click → home (rows stopPropagation below).
+    <div
+      data-testid="surface-history"
+      onClick={onBack}
+      className="absolute inset-0 flex flex-col items-center justify-center px-4 pb-44 pt-28"
+    >
       <div className="no-scrollbar w-full max-h-[60dvh] space-y-4 overflow-y-auto pb-12 text-center">
         {items.length === 0 ? (
           <p className="mt-20 font-mono text-xs tracking-widest text-neutral-500 md:text-sm">
@@ -26,7 +34,10 @@ export default function HistoryView({ items }) {
             <button
               key={item.id}
               type="button"
-              onClick={() => openExternalUrl(resolveHistoryTarget(item.name))}
+              onClick={(e) => {
+                e.stopPropagation();
+                openExternalUrl(resolveHistoryTarget(item.name));
+              }}
               title="Open in new tab"
               className={`block w-full cursor-pointer break-words py-1 text-base transition-transform duration-300 hover:scale-[1.025] md:text-2xl ${
                 item.isActive

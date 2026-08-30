@@ -19,11 +19,21 @@ import { openExternalUrl } from '../utils.js';
 const clampOffset = (rem) => Math.max(0, Math.min(rem, 6)); // 0–96px
 
 /**
- * @param {{ tabs: Array<{id:number,label:string,title:string,offset:number,url:string}> }} props
+ * @param {{
+ *   tabs: Array<{id:number,label:string,title:string,offset:number,url:string}>,
+ *   onBack: () => void,
+ * }} props
  */
-export default function TabsView({ tabs }) {
+export default function TabsView({ tabs, onBack }) {
   return (
-    <div className="no-scrollbar absolute inset-0 overflow-y-auto overflow-x-hidden px-5 pb-44 pt-28 md:px-24 md:pt-32">
+    // Blank-area click → home. Clicks on the panel background bubble
+    // here; item clicks stopPropagation (see below).
+    <div
+      data-testid="surface-tabs"
+      data-scroll-root
+      onClick={onBack}
+      className="no-scrollbar absolute inset-0 overflow-y-auto overflow-x-hidden px-5 pb-44 pt-28 md:px-24 md:pt-32"
+    >
       <h2 className="mb-10 border-b border-neutral-800 pb-4 font-bold tracking-tighter text-white md:mb-16"
         style={{ fontSize: 'var(--fluid-section-title)' }}
       >
@@ -40,7 +50,11 @@ export default function TabsView({ tabs }) {
             <button
               key={tab.id}
               type="button"
-              onClick={() => openExternalUrl(tab.url)}
+              onClick={(e) => {
+                // Item click = open the session, never "back".
+                e.stopPropagation();
+                openExternalUrl(tab.url);
+              }}
               title={`Open ${tab.url}`}
               // Explicit accessible name (button text is visual only).
               aria-label={`Open ${tab.title}`}

@@ -13,12 +13,22 @@ three loose JSX drafts into a proper, tested project.
 ## Features
 
 - **Five views** — Start (SYS®), Open Sessions, History, Bookmarks, Preferences.
+- **Home button** — a HOME chip sits left of TABS in the top nav and
+  returns to the start page from anywhere (wordmark does too).
+- **Blank-area click → home** — tapping the empty background of Tabs /
+  History / Bookmarks / the Settings backdrop goes back to the start page.
+- **Autofocus + type-anywhere** — the search bar is focused on load and
+  any printable key typed anywhere on the page is routed straight into
+  it (browser-omnibox feel).
 - **Live search filtering** — one global search dock filters Tabs,
   History and Bookmarks as you type; `Enter` opens the first match
   (or a web search from the start page).
-- **Global keyboard bindings** — `Ctrl/Cmd+K` (focus search),
-  `Ctrl/Cmd+,` (settings), `Ctrl/Cmd+H` (history), `Ctrl/Cmd+B`
-  (bookmarks), `Esc` (home).
+- **Universal keys** (see `src/hooks/useViewShortcuts.js`):
+  `Ctrl/Cmd+L` (URL/search), `Ctrl/Cmd+K` (filter/focus),
+  `Alt+← / Alt+→` (back/forward), `Ctrl+R` (soft refresh),
+  `Ctrl+Shift+R` (hard refresh), `Ctrl+Tab / Ctrl+Shift+Tab`
+  (next/previous view), `Ctrl/Cmd+H` (history), `Ctrl/Cmd+B` (bookmarks),
+  `Ctrl/Cmd+,` (settings), `Esc` (clear → close).
 - **Mock account sync** — guest vs. synced datasets toggle in Settings,
   with more rows to demonstrate smooth scrolling.
 - **Persistent preferences** — search-dock alignment survives reload
@@ -77,6 +87,7 @@ npm run check      # lint + tests + production build  ← run before commit
 │   └── *.test.jsx              # interaction + unit tests
 ├── ARCHITECTURE.md             # design + perf decisions
 ├── BUGLOG.md                   # bugs found → fixes → verification
+├── ENGINE.md                   # real-engine research + roadmap (Tauri/Servo)
 └── index.jsx, 2IMPROVEDindex.jsx, 3MOREIMPROVEDindex.jsx
                                 # archived single-file drafts (unmaintained)
 ```
@@ -87,6 +98,8 @@ npm run check      # lint + tests + production build  ← run before commit
   the responsive / high-refresh-rate strategy.
 - **[BUGLOG.md](./BUGLOG.md)** — every bug found in the original drafts
   and during the rebuild, with fixes and how they were verified.
+- **[ENGINE.md](./ENGINE.md)** — "how do we add a real engine?" research:
+  Electron vs Tauri vs Servo on Linux/Arch, with a staged recommendation.
 
 ## License
 

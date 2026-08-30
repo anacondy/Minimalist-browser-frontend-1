@@ -10,10 +10,12 @@
  * Only text colour changes on hover (no layout shift) and buttons get
  * proper `aria-*` attributes for screen readers.
  */
-import { Bookmark, History, Layers, Settings } from 'lucide-react';
+import { Bookmark, History, Home, Layers, Settings } from 'lucide-react';
 import { VIEWS } from '../constants.js';
 
 const NAV_ITEMS = [
+  // Home always leads back to the start page, from anywhere.
+  { view: VIEWS.MAIN, label: 'HOME', title: 'Home', Icon: Home },
   { view: VIEWS.TABS, label: 'TABS', title: 'Open sessions', Icon: Layers },
   { view: VIEWS.HISTORY, label: 'HIST', title: 'History', Icon: History },
   { view: VIEWS.BOOKMARKS, label: 'BKMK', title: 'Bookmarks', Icon: Bookmark },
@@ -39,7 +41,7 @@ export default function TopNav({ activeView, onNavigate, now }) {
       className="app-top-nav absolute inset-x-0 top-0 z-50 flex items-start justify-between mix-blend-difference text-neutral-400 uppercase tracking-[0.2em]"
       style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 'clamp(9px, 1.5vw, 12px)' }}
     >
-      {/* Brand → home */}
+      {/* Brand → home (wordmark doubles as home affordance) */}
       <div className="flex flex-col gap-1">
         <button
           type="button"

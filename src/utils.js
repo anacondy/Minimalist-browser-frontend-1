@@ -23,6 +23,33 @@ export const openExternalUrl = (url) => {
   window.open(url, '_blank', 'noopener,noreferrer');
 };
 
+/**
+ * Hard refresh — full page reload (Ctrl+Shift+R). Guarded so test/DOM
+ * environments that don't implement navigation never crash the app.
+ *
+ * The reload function is injected via a small setter (default: the
+ * page's own location.reload) so unit tests can observe it without
+ * fighting jsdom's non-configurable `location.reload` property.
+ */
+const reloadImpl = {
+  fn: () => {
+    if (
+      typeof window !== 'undefined' &&
+      typeof window.location?.reload === 'function'
+    ) {
+      window.location.reload();
+    }
+  },
+};
+
+/** Override the reload implementation (tests / embedded shells). */
+export const setReloadImpl = (fn) => {
+  reloadImpl.fn = fn;
+};
+
+/** Trigger a full page reload. */
+export const reloadPage = () => reloadImpl.fn();
+
 /** "http://foo.bar" → "foo.bar" for compact display. */
 export const prettifyUrl = (url) =>
   url.replace(/^https?:\/\//i, '').replace(/\/$/, '');

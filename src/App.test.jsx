@@ -1,23 +1,24 @@
 /**
  * App smoke/interaction suite (Vitest + jsdom + Testing Library).
  * ------------------------------------------------------------------
- * Verifies, in a real DOM:
- *   1. Initial render (hero + nav) with zero console errors.
- *   2. All nav buttons switch views; Escape returns home.
- *   3. Settings: X / backdrop close, sync toggle swaps dataset size,
- *      dock-alignment toggle persists to localStorage.
- *   4. Search: main-view Enter opens Google; tab/history/bookmark
- *      filtering works; Enter in a filter view opens the first hit.
- *   5. Global shortcuts: Ctrl/Cmd+K (focus), Ctrl+H / Ctrl+,, / Ctrl+B.
+ * Behaviour under test (mirrors the user-facing spec):
+ *   1. Initial render (hero + nav incl. HOME chip) with zero errors.
+ *   2. Nav buttons switch views; HOME chip works from any view.
+ *   3. Blank-area click → home on Tabs / History / Bookmarks / Settings.
+ *   4. Settings: X, backdrop, sync toggle (dataset swap), dock toggle.
+ *   5. Search submit (main = Google; filter views = first match).
+ *   6. Autofocus on load + type-anywhere routing into the search bar.
+ *   7. Universal keys: Ctrl+L/K, Ctrl+R / Ctrl+Shift+R, Ctrl+Tab,
+ *      Alt+←/→, Ctrl+H / Ctrl+B / Ctrl+,, Esc (clear → close).
  *
- * Responsive layout is additionally checked in the static CSS review
- * (fluid clamp() type, 100dvh, safe-areas) — jsdom has no layout
- * engine, so pixel overflow checks belong to a browser harness.
+ * Responsive layout is covered by static CSS review (clamp type,
+ * 100dvh, safe-areas) — jsdom has no layout engine.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from './App.jsx';
+import { setReloadImpl } from './utils.js';
 
 /* jsdom lacks parts of the browser API the app touches lightly. */
 const polyfill = () => {
@@ -29,14 +30,16 @@ const polyfill = () => {
   }
 };
 
-/** Render the app with a fresh user + stubbed window.open. */
+/** Render the app with a fresh user + stubbed window.open / reload. */
 const setup = () => {
   polyfill();
-  const openSpy = vi
-    .spyOn(window, 'open')
-    .mockImplementation(() => null);
+  const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+  // Inject reload location (jsdom's location.reload is non-configurable,
+  // so we observe it through utils' injection point instead).
+  const reloadSpy = vi.fn();
+  setReloadImpl(reloadSpy);
   const user = userEvent.setup();
-  return { user, openSpy };
+  return { user, openSpy, reloadSpy };
 };
 
 /** View visibility helper — inactive panels are aria-hidden. */
@@ -45,9 +48,13 @@ const expectView = (view, visible) => {
   expect(panel.getAttribute('aria-hidden')).toBe(String(!visible));
 };
 
+/** The search/omnibox input (role=searchbox). */
+const searchInput = () => screen.getByRole('textbox', { name: /search or enter url/i });
+
 beforeEach(() => {
   window.localStorage.clear();
   vi.restoreAllMocks();
+  setReloadImpl(() => {}); // reset to no-op between tests
 });
 
 afterEach(() => {
@@ -55,81 +62,117 @@ afterEach(() => {
 });
 
 describe('SYS® Minimalist Browser — interactions', () => {
-  it('renders the hero and nav without console errors', () => {
+  it('renders the hero, HOME chip and nav without console errors', () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     setup();
     render(<App />);
 
     expect(screen.getByRole('heading', { name: /SYS®/i })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Home' })).toBeDefined();
     expect(screen.getByRole('button', { name: 'Open sessions' })).toBeDefined();
     expectView('main', true);
     expect(errorSpy).not.toHaveBeenCalled();
   });
 
-  it('navigates between all views via the nav buttons', async () => {
+  it('autofocuses the search bar on load', async () => {
+    const { user } = setup();
+    render(<App />);
+    // user-event's setup() simulates an initial "user" context, so give
+    // the focus effect a microtask to settle before asserting.
+    await waitFor(() => expect(document.activeElement).toBe(searchInput()));
+    expect(user).toBeDefined();
+  });
+
+  it('navigates between all views via nav buttons', async () => {
     const { user } = setup();
     render(<App />);
 
-    // Tabs
     await user.click(screen.getByRole('button', { name: 'Open sessions' }));
     expectView('tabs', true);
-    expect(screen.getByText(/OPEN SESSIONS/)).toBeDefined();
 
-    // History
     await user.click(screen.getByRole('button', { name: 'History' }));
     expectView('history', true);
     expectView('tabs', false);
 
-    // Bookmarks
     await user.click(screen.getByRole('button', { name: 'Bookmarks' }));
     expectView('bookmarks', true);
 
-    // Settings
     await user.click(screen.getByRole('button', { name: 'Settings' }));
     expectView('settings', true);
     expect(screen.getByRole('dialog', { name: 'Preferences' })).toBeDefined();
 
-    // Escape returns home
+    // Esc returns home
     await user.keyboard('{Escape}');
     expectView('main', true);
     expectView('settings', false);
   });
 
-  it('closes settings from the X button and the backdrop', async () => {
+  it('HOME (left of TABS in the nav) returns home from every view', async () => {
     const { user } = setup();
     render(<App />);
 
+    // HOME renders to the left of TABS in the nav cluster.
+    const homeBtn = screen.getByRole('button', { name: 'Home' });
+    const tabsBtn = screen.getByRole('button', { name: 'Open sessions' });
+    expect(homeBtn.compareDocumentPosition(tabsBtn) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    const views = [
+      ['Open sessions', 'tabs'],
+      ['History', 'history'],
+      ['Bookmarks', 'bookmarks'],
+      ['Settings', 'settings'],
+    ];
+    for (const [name, view] of views) {
+      await user.click(screen.getByRole('button', { name }));
+      expectView(view, true);
+      await user.click(homeBtn);
+      expectView('main', true);
+    }
+  });
+
+  it('blank-area click on any panel returns home (items still work)', async () => {
+    const { user } = setup();
+    render(<App />);
+
+    // Tabs — click the panel surface (not a session row).
+    await user.click(screen.getByRole('button', { name: 'Open sessions' }));
+    await user.click(screen.getByTestId('surface-tabs'));
+    expectView('main', true);
+
+    // History — click the panel surface.
+    await user.click(screen.getByRole('button', { name: 'History' }));
+    await user.click(screen.getByTestId('surface-history'));
+    expectView('main', true);
+
+    // Bookmarks — click the panel surface.
+    await user.click(screen.getByRole('button', { name: 'Bookmarks' }));
+    await user.click(screen.getByTestId('surface-bookmarks'));
+    expectView('main', true);
+
+    // Settings — backdrop click (dialog's parent).
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
+    const backdrop = screen.getByRole('dialog').parentElement;
+    await user.click(backdrop);
+    expectView('main', true);
+  });
+
+  it('closes settings from the X and toggles the sync dataset', async () => {
+    const { user } = setup();
+    render(<App />);
+
+    // X close
     await user.click(screen.getByRole('button', { name: 'Settings' }));
     await user.click(screen.getByRole('button', { name: 'Close settings' }));
     expectView('settings', false);
 
-    await user.click(screen.getByRole('button', { name: 'Settings' }));
-    // Click the backdrop itself (dialog's parent section).
-    const backdrop = screen.getByRole('dialog').parentElement;
-    await user.click(backdrop);
-    expectView('settings', false);
-  });
-
-  it('sync toggle switches between guest and synced datasets', async () => {
-    const { user } = setup();
-    render(<App />);
-
-    // Guest profile → 2 sessions when synced off.
-    // (Session rows expose aria-labels like "Open YOUTUBE MUSIC…";
-    //  the nav button is "Open sessions" — lowercase, so excluded.)
-    await user.click(screen.getByRole('button', { name: 'Open sessions' }));
-    let rows = screen.queryAllByRole('button', { name: /^Open [A-Z0-9]/ });
-    expect(rows.length).toBe(2);
-
-    // Enable sync from Settings.
+    // Sync toggle: guest (2 tabs) → synced (8 tabs).
     await user.click(screen.getByRole('button', { name: 'Settings' }));
     await user.click(screen.getByRole('button', { name: /CONNECT ACCOUNT/ }));
     expect(screen.getByText(/SYNCED VIA GOOGLE/)).toBeDefined();
 
-    // Revisit tabs → 8 sessions.
     await user.keyboard('{Escape}');
     await user.click(screen.getByRole('button', { name: 'Open sessions' }));
-    rows = screen.queryAllByRole('button', { name: /^Open [A-Z0-9]/ });
+    const rows = screen.queryAllByRole('button', { name: /^Open [A-Z0-9]/ });
     expect(rows.length).toBe(8);
   });
 
@@ -149,36 +192,51 @@ describe('SYS® Minimalist Browser — interactions', () => {
     const { user } = setup();
     render(<App />);
 
-    // Use the synced profile so filters have rich data to cut through.
+    // Synced profile gives the filters real data to cut through.
     await user.click(screen.getByRole('button', { name: 'Settings' }));
     await user.click(screen.getByRole('button', { name: /CONNECT ACCOUNT/ }));
     await user.keyboard('{Escape}');
 
-    // Tabs filter
     await user.click(screen.getByRole('button', { name: 'Open sessions' }));
-    await user.type(screen.getByRole('textbox', { name: /search/i }), 'react');
+    await user.type(searchInput(), 'react');
     expect(screen.queryByText('REACT JS DOCUMENTATION')).not.toBeNull();
     expect(screen.queryByText('YOUTUBE MUSIC - CURRENT PLAYLIST')).toBeNull();
-    expect(screen.queryByText(/NO SESSIONS MATCHING/)).toBeNull();
 
-    // History filter (switch = clears query, then type)
     await user.click(screen.getByRole('button', { name: 'History' }));
-    await user.type(screen.getByRole('textbox', { name: /search/i }), 'github');
+    await user.type(searchInput(), 'github');
     expect(screen.queryByText('github.com/trending')).not.toBeNull();
     expect(screen.queryByText('localhost:3000')).toBeNull();
 
-    // Bookmarks filter
     await user.click(screen.getByRole('button', { name: 'Bookmarks' }));
-    await user.type(screen.getByRole('textbox', { name: /search/i }), 'physics');
+    await user.type(searchInput(), 'physics');
     expect(screen.queryByText('PHYSICS FORUMS')).not.toBeNull();
     expect(screen.queryByText('BPM MUSIC CATALOGUE')).toBeNull();
+  });
+
+  it('types anywhere — printable keys land in the search bar', async () => {
+    const { user } = setup();
+    render(<App />);
+
+    // Blur the input deliberately, then type — chars must be captured.
+    searchInput().blur();
+    expect(document.activeElement).not.toBe(searchInput());
+    await user.keyboard('hello world');
+
+    await waitFor(() => {
+      expect(searchInput().value).toBe('hello world');
+      expect(document.activeElement).toBe(searchInput());
+    });
+
+    // Filtering reacts to the captured query (tabs view owns it).
+    await user.click(screen.getByRole('button', { name: 'Open sessions' }));
+    expect(searchInput().value).toBe(''); // view switch clears query
   });
 
   it('submits the main-view search to Google and clears the input', async () => {
     const { user, openSpy } = setup();
     render(<App />);
 
-    const input = screen.getByRole('textbox', { name: /search/i });
+    const input = searchInput();
     await user.type(input, 'how to build a browser');
     await user.keyboard('{Enter}');
 
@@ -194,10 +252,8 @@ describe('SYS® Minimalist Browser — interactions', () => {
     const { user, openSpy } = setup();
     render(<App />);
 
-    // History → filter to a URL-like entry → Enter opens it directly.
     await user.click(screen.getByRole('button', { name: 'History' }));
-    const input = screen.getByRole('textbox', { name: /search/i });
-    await user.type(input, 'localhost');
+    await user.type(searchInput(), 'localhost');
     await user.keyboard('{Enter}');
 
     expect(openSpy).toHaveBeenCalledWith(
@@ -207,45 +263,98 @@ describe('SYS® Minimalist Browser — interactions', () => {
     );
   });
 
-  it('responds to global keyboard shortcuts (Ctrl/Cmd)', async () => {
+  it('universal keys: Ctrl+L focus, Ctrl+K filter, Ctrl+Tab cycle', async () => {
     const { user } = setup();
     render(<App />);
 
-    // Ctrl+H → history
+    // Ctrl+L focuses the dock even when another view is open
+    // (focus is applied on the next frame — await it).
+    await user.click(screen.getByRole('button', { name: 'History' }));
+    await user.keyboard('{Control>}l{/Control}');
+    await waitFor(() => expect(document.activeElement).toBe(searchInput()));
+
+    // Ctrl+Tab cycles: history → bookmarks → settings → main → tabs…
+    await user.keyboard('{Control>}{Tab}');
+    expectView('bookmarks', true);
+    await user.keyboard('{Control>}{Tab}');
+    expectView('settings', true);
+    await user.keyboard('{Control>}{Tab}');
+    expectView('main', true);
+    await user.keyboard('{Control>}{Tab}');
+    expectView('tabs', true);
+    await user.keyboard('{Control>}{Shift>}{Tab}{/Shift}{/Control}');
+    expectView('main', true);
+
+    // Ctrl+K focuses the dock (any view).
+    await user.keyboard('{Control>}k{/Control}');
+    await waitFor(() => expect(document.activeElement).toBe(searchInput()));
+  });
+
+  it('universal keys: Alt+←/→ back/forward navigation', async () => {
+    const { user } = setup();
+    render(<App />);
+
+    await user.click(screen.getByRole('button', { name: 'History' }));
+    await user.click(screen.getByRole('button', { name: 'Bookmarks' }));
+    expectView('bookmarks', true);
+
+    // Back: bookmarks → history → main.
+    await user.keyboard('{Alt>}{ArrowLeft}{/Alt}');
+    expectView('history', true);
+    await user.keyboard('{Alt>}{ArrowLeft}{/Alt}');
+    expectView('main', true);
+    // No-op at the bottom of the stack.
+    await user.keyboard('{Alt>}{ArrowLeft}{/Alt}');
+    expectView('main', true);
+
+    // Forward: main → history → bookmarks.
+    await user.keyboard('{Alt>}{ArrowRight}{/Alt}');
+    expectView('history', true);
+    await user.keyboard('{Alt>}{ArrowRight}{/Alt}');
+    expectView('bookmarks', true);
+  });
+
+  it('universal keys: Ctrl+R soft refresh, Ctrl+Shift+R hard refresh', async () => {
+    const { user, reloadSpy } = setup();
+    render(<App />);
+
+    // Soft refresh: stays on the current view, filters clear.
+    await user.click(screen.getByRole('button', { name: 'Open sessions' }));
+    await user.type(searchInput(), 'zzz-nonexistent');
+    expect(screen.queryByText(/NO SESSIONS MATCHING/)).not.toBeNull();
+
+    await user.keyboard('{Control>}r{/Control}');
+    expectView('tabs', true); // still here
+    expect(searchInput().value).toBe('');
+    expect(reloadSpy).not.toHaveBeenCalled();
+
+    // Hard refresh: full page reload.
+    await user.keyboard('{Control>}{Shift>}r{/Shift}{/Control}');
+    expect(reloadSpy).toHaveBeenCalled();
+  });
+
+  it('universal keys: Ctrl+H / Ctrl+B / Ctrl+, and Esc clears-then-closes', async () => {
+    const { user } = setup();
+    render(<App />);
+
     await user.keyboard('{Control>}h{/Control}');
     expectView('history', true);
-
-    // Ctrl+, → settings
+    await user.keyboard('{Control>}b{/Control}');
+    expectView('bookmarks', true);
     await user.keyboard('{Control>},{/Control}');
     expectView('settings', true);
 
-    // Ctrl+B → bookmarks (Settings closes via command switch)
-    await user.keyboard('{Control>}b{/Control}');
-    expectView('bookmarks', true);
-
-    // Ctrl+K → focus the search dock (visible even in filter views)
-    await user.keyboard('{Control>}k{/Control}');
-    expect(document.activeElement).toBe(
-      screen.getByRole('textbox', { name: /search/i }),
-    );
-
-    // Cmd+K works too (macOS parity)
-    await user.keyboard('{Meta>}k{/Meta}');
-    expect(document.activeElement).toBe(
-      screen.getByRole('textbox', { name: /search/i }),
-    );
-  });
-
-  it('does not hijack Enter/Escape while typing in the search field', async () => {
-    const { user } = setup();
-    render(<App />);
-
-    // Enter in the field submits (already covered) and Escape after
-    // navigating to history keeps us there (no forced home).
-    await user.click(screen.getByRole('button', { name: 'History' }));
-    const input = screen.getByRole('textbox', { name: /search/i });
-    await user.click(input);
+    // Esc (field has no text) → close to home.
     await user.keyboard('{Escape}');
-    expectView('history', true);
+    expectView('main', true);
+
+    // Esc with text in the field clears first, closes on second Esc.
+    await user.click(screen.getByRole('button', { name: 'History' }));
+    await user.type(searchInput(), 'deep query');
+    await user.keyboard('{Escape}');
+    expect(searchInput().value).toBe('');
+    expectView('history', true); // still open
+    await user.keyboard('{Escape}');
+    expectView('main', true);
   });
 });

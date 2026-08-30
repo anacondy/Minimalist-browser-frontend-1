@@ -39,13 +39,21 @@ is green (lint + 19 tests + production build).
 | B4 | `resolveHistoryTarget` treated `localhost:3000` as a search (no dot) | URL-like regex now recognises host, `host:port`, IPs |
 | B5 | Tab rows' accessible name came from visual text (not `title`) | Explicit `aria-label="Open {title}"` |
 | B6 | Legacy draft files failed lint (`React` unused, in-render components) | Archived in place; excluded via ESLint ignores |
+| B7 | No way home from sub-views; no HOME affordance next to TABS | Native HOME item (icon+text) at the left of TABS; wordmark also home |
+| B8 | Keys only reached the search bar after clicking it | Autofocus on mount + `useTypingCapture` (type-anywhere omnibox) |
+| B9 | Missing browser-like bindings | Unified `onAction` dispatcher: Ctrl+L/K/R/Shift+R/Tab, Alt+←/→, Ctrl+H/B/,, Esc (clear-then-close) |
+| B10 | No Ctrl+TAB / Alt-arrow due to page-level shortcuts | Implemented + documented; real availability marked for the desktop shell (see ENGINE.md); back/forward stack added |
+| B11 | Only Settings had backdrop-close | Blank-area click → home on Tabs, History, Bookmarks surfaces too |
+| B12 | Hard refresh coupled to `location.reload` (untestable in jsdom) | `reloadPage` via injectable `setReloadImpl` |
+| B13 | Duplicate "Home" accessible names after adding the chip | Single HOME nav item; brand keeps its own distinct label |
+| B14 | `TRANSITIONS.SETTINGS` used a Tailwind class as an inline transform | Corrected to `'none'` (valid CSS) |
 
 ## C. Verification matrix
 
 | Check | Tool | Result |
 | --- | --- | --- |
 | ESLint (hooks + refresh rules) | `npm run lint` | clean |
-| Render + nav + settings + filtering + shortcuts + submit (10 interaction tests) | Vitest + Testing Library | **10/10 pass** |
+| Interaction suite (nav, HOME, blank-click, filter, type-anywhere, all universal keys, submit) | Vitest + Testing Library | **15/15 pass** |
 | Pure utils (search URLs, URL resolution) | Vitest | **9/9 pass** |
 | Production build (tree-shaken, sourcemapped) | `npm run build` | 212 kB JS / 66.9 kB gzip · 31 kB CSS / 6.3 kB gzip |
 | Dev server serves + transforms modules | Vite + curl | HTTP 200; host-allowed; HMR restarted cleanly |

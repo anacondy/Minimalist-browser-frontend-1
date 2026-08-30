@@ -10,12 +10,23 @@ import { Globe } from 'lucide-react';
 import { openExternalUrl, prettifyUrl } from '../utils.js';
 
 /**
- * @param {{ items: Array<{id:number,title:string,url:string}> }} props
+ * @param {{
+ *   items: Array<{id:number,title:string,url:string}>,
+ *   onBack: () => void,
+ * }} props
  */
-export default function BookmarksView({ items }) {
+export default function BookmarksView({ items, onBack }) {
   return (
-    <div className="absolute inset-0 flex flex-col items-center pb-44 pt-28">
-      <div className="no-scrollbar w-full max-h-[70dvh] max-w-4xl overflow-y-auto px-5 pb-24">
+    // Blank-area click → home (cards stopPropagation below).
+    <div
+      data-testid="surface-bookmarks"
+      onClick={onBack}
+      className="absolute inset-0 flex flex-col items-center pb-44 pt-28"
+    >
+      <div
+        data-scroll-root
+        className="no-scrollbar w-full max-h-[70dvh] max-w-4xl overflow-y-auto px-5 pb-24"
+      >
         {items.length === 0 ? (
           <p className="mt-20 text-center font-mono text-xs tracking-widest text-neutral-500 md:text-sm">
             NO BOOKMARKS FOUND.
@@ -26,7 +37,10 @@ export default function BookmarksView({ items }) {
               <button
                 key={item.id}
                 type="button"
-                onClick={() => openExternalUrl(item.url)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openExternalUrl(item.url);
+                }}
                 title={`Open ${item.url}`}
                 className="group flex items-center gap-4 rounded-xl border border-transparent p-4 text-left transition-all duration-300 hover:border-neutral-800"
               >

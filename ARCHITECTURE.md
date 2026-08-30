@@ -38,7 +38,9 @@ src/
 │   └── SearchDock.jsx  Global search form (contextual placeholder).
 └── hooks/
     ├── useNow.js               Clock, aligned to minute boundaries.
-    ├── useViewShortcuts.js     Global Ctrl/Cmd bindings (ref-closures).
+    ├── useViewShortcuts.js     Universal browser-like key bindings
+    │                           (Ctrl+L/K/R/Tab, Alt+←/→, Esc…).
+    ├── useTypingCapture.js     Type-anywhere → routes keys to the dock.
     ├── useMediaQuery.js        useSyncExternalStore wrapper (unused
     │                           today; available for feature work).
     └── useLocalPreference.js   Persisted state (search dock alignment).
@@ -137,7 +139,29 @@ resize, iPhone notch/home-indicator, and keyboard-only usage.
 - No `dangerouslySetInnerHTML`; all query strings pass through
   `encodeURIComponent`.
 
-## 8. Known limitations (deliberate scope)
+## 8. Navigation model & universal keys
+
+View switching keeps a **back/forward stack** (`backStackRef` /
+`forwardStackRef`, capped at 50) so:
+
+- `Alt+←` pops the previous view; `Alt+→` redoes it.
+- `Ctrl+Tab` / `Ctrl+Shift+Tab` cycle `VIEW_ORDER`.
+- `Ctrl+R` = soft refresh: clear the filter + reset scroll in place
+  (no reload — mock data is static; a real data fetch plugs in here).
+- `Ctrl+Shift+R` = hard refresh: full page reload (injectable impl for
+  embedded shells/tests).
+- Blank-area clicks on Tabs / History / Bookmarks surfaces and the
+  Settings backdrop all route to the start page (`onBack` / `onClose`).
+- **Typing capture**: `useTypingCapture` routes single printable keys
+  into the search dock (omnibox behaviour) while modifiers pass through
+  to `useViewShortcuts`, whose one `onAction` dispatcher serves every
+  binding (see `src/hooks/useViewShortcuts.js` for the full table).
+
+> **Embedded-shell note:** top-level browsers own Ctrl+Tab and
+> Alt+←/→, so a page may never see them. Inside a desktop shell
+> (Tauri/Electron/CEF — see `ENGINE.md`) we register them natively.
+
+## 9. Known limitations (deliberate scope)
 
 - Account "sync" is **mock data** — there is no backend.
 - `useMediaQuery` is exported but unused (kept as a documented building
