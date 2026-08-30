@@ -1,0 +1,26 @@
+<!doctype html>
+<!--
+  SYS® Minimalist Browser — application shell.
+  Only document metadata + #root live here; all UI is rendered by React.
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- Preview proxy requires a relative viewport-safe layout; no CSP meta needed.
+         Responsive: dynamic viewport units are handled inside the app CSS. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#000000" />
+    <meta
+      name="description"
+      content="SYS® — a minimalist, brutalist browser front-end concept. Fast, responsive, keyboard-first."
+    />
+    <title>SYS® — Minimalist Browser</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <!-- Vite injects the module entry point here in dev and the hashed
+         bundle in production builds. -->
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

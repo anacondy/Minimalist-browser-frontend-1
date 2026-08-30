@@ -1,0 +1,125 @@
+/**
+ * Global styles — Tailwind v4 + platform hardening
+ * ------------------------------------------------------------------
+ * Performance / high-refresh-rate notes
+ *  - Every animated property in the app is transform or opacity only.
+ *    Those are compositor-friendly: they never trigger layout/paint and
+ *    stay smooth on 120/144/240 Hz panels.
+ *  - `transform-gpu` promotes the main motion layers to the GPU.
+ *  - `@media (prefers-reduced-motion: reduce)` disables decorative
+ *    animation for users who ask for less movement (accessibility).
+ *
+ * Responsive notes
+ *  - Typography uses fluid `clamp()` so one rule covers phone → 4K.
+ *  - `100dvh` tracks the real, dynamic viewport height on mobile
+ *    (address-bar show/hide), preventing clipped or overflowing layouts.
+ *  - `env(safe-area-inset-*)` keeps content clear of notches / home
+ *    indicators on iOS.
+ */
+
+@import 'tailwindcss';
+
+/* ---------- Design tokens (CSS variables, Tailwind v4 aware) ---------- */
+:root {
+  --color-bg: #000000;
+  --accent-glow: rgba(255, 255, 255, 0.08);
+
+  /* Fluid display sizes: 4.5rem (mobile) → 9rem (desktop/4K) */
+  --fluid-display: clamp(4rem, 12vw + 1rem, 9rem);
+  --fluid-section-title: clamp(2rem, 5vw + 0.5rem, 4rem);
+}
+
+/* ---------- Base reset ---------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+html {
+  /* Prevent iOS font-size inflation on rotation / zoom quirks. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: #e5e5e5;
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    'Helvetica Neue',
+    Arial,
+    sans-serif;
+  /* Overscroll rubber-banding shows pure black on mobile — cleaner. */
+  overscroll-behavior-y: none;
+  /* Tap feedback consistent with the mono/brutalist aesthetic. */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ---------- App container ---------- */
+.app-root {
+  /* dvh = dynamic viewport height (mobile URL-bar safe). */
+  height: 100dvh;
+  min-height: 100dvh;
+  overflow: hidden;
+  position: relative;
+  background: var(--color-bg);
+}
+
+/* Safe-area aware top nav (covers iPhone notch/status bar). */
+.app-top-nav {
+  padding-top: max(1rem, env(safe-area-inset-top));
+  padding-left: max(1rem, env(safe-area-inset-left));
+  padding-right: max(1rem, env(safe-area-inset-right));
+}
+
+/* Safe-area aware bottom search dock. */
+.app-search-dock {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+/* ---------- Utility: invisible scrollbars ---------- */
+.no-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* legacy Edge/IE */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* WebKit/Blink */
+}
+
+/* ---------- Utility: keep backdrop-blur cheap on low-end GPUs ---------- */
+.backdrop-soft {
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  /* Only the topmost modal layer blurs; blur is a paint cost on
+     integrated GPUs, so it is kept to one layer and short range. */
+}
+
+/* ---------- Reduced motion: kill decorative transitions ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---------- Focus visibility (keyboard accessibility) ---------- */
+:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
