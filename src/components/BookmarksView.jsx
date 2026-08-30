@@ -7,7 +7,8 @@
  * - 100% width in the dock-safe scroll area; text truncates gracefully.
  */
 import { Globe } from 'lucide-react';
-import { openExternalUrl, prettifyUrl } from '../utils.js';
+import { openSessionTab } from '../native.js';
+import { prettifyUrl } from '../utils.js';
 
 /**
  * @param {{
@@ -39,7 +40,7 @@ export default function BookmarksView({ items, onBack }) {
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  openExternalUrl(item.url);
+                  openSessionTab(item.url, item.title);
                 }}
                 title={`Open ${item.url}`}
                 className="group flex items-center gap-4 rounded-xl border border-transparent p-4 text-left transition-all duration-300 hover:border-neutral-800"

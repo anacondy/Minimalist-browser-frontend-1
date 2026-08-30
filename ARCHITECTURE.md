@@ -32,6 +32,8 @@ src/
 │   ├── TopNav.jsx      Status bar: brand/home + view switcher.
 │   ├── TabStrip.jsx    Persistent browser tab bar (active-tab chrome).
 │   ├── HomeView.jsx    Hero (SYS®) — typography only, zero assets.
+│   ├── native.js       Tauri bridge: open/close/navigate/reload tabs
+│   │                   (fallback to window.open in the browser).
 │   ├── TabsView.jsx    Staggered session list (scrollable).
 │   ├── HistoryView.jsx Cast-list history (scrollable).
 │   ├── BookmarksView.jsx Responsive bookmark grid (scrollable).

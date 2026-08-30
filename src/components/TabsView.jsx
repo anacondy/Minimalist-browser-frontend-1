@@ -13,7 +13,7 @@
  *  - Clicking a session "restores" it: opens its URL in a new tab
  *    (buttons that used to be cursor-pointer but dead are now wired).
  */
-import { openExternalUrl } from '../utils.js';
+import { openSessionTab } from '../native.js';
 
 /** Clamp the decorative indent so it never pushes content off-screen. */
 const clampOffset = (rem) => Math.max(0, Math.min(rem, 6)); // 0–96px
@@ -57,7 +57,7 @@ export default function TabsView({ tabs, activeTabId, onBack }) {
                 onClick={(e) => {
                   // Item click = open the session, never "back".
                   e.stopPropagation();
-                  openExternalUrl(tab.url);
+                  openSessionTab(tab.url, tab.title);
                 }}
                 title={`Open ${tab.url}`}
                 // Explicit accessible name (button text is visual only).

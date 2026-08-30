@@ -48,6 +48,7 @@ is green (lint + 19 tests + production build).
 | B13 | Duplicate "Home" accessible names after adding the chip | Single HOME nav item; brand keeps its own distinct label |
 | B14 | `TRANSITIONS.SETTINGS` used a Tailwind class as an inline transform | Corrected to `'none'` (valid CSS) |
 | B15 | Ctrl+Tab cycled the UI **panels** (home/tabs/hist/bkmk/cfg) — not browser tabs | New `activeTabId` state + `<TabStrip />`; `Ctrl+Tab`/`Ctrl+Shift+Tab` now cycle OPEN TABS only; panels keep their own TopNav/Alt+←/→ navigation; tests assert "switch tabs, never panels" |
+| B16 | No desktop integration at all (web-only) | Tauri v2 shell scaffolded & wired: `src-tauri/` Rust commands (`open_tab`, `close_tab`, `tab_navigate`, `tab_reload`), `src/native.js` bridge with browser fallback, generated icons, `tauri:dev`/`tauri:build` scripts. Sandbox limits (no Rust; crates.io/rustup firewalled) documented in ENGINE.md — first real compile happens on the user's Arch machine |
 
 ## C. Verification matrix
 

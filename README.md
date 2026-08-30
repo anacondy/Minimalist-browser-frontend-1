@@ -67,8 +67,40 @@ npm run check      # lint + tests + production build  ← run before commit
 | `npm run build` | Production bundle into `dist/` |
 | `npm run preview` | Preview the production build |
 | `npm run lint` | ESLint flat config (hooks + refresh rules) |
-| `npm run test` | Vitest suite (`src/*.test.jsx`) — 19 tests |
+| `npm run test` | Vitest suite (`src/*.test.jsx`) — 29 tests |
 | `npm run check` | lint → test → build (CI-style gate) |
+| `npm run tauri:dev` | Run the **desktop app** (Tauri v2 shell + Vite) |
+| `npm run tauri:build` | Build installers (deb / rpm / AppImage) |
+
+## Desktop shell (Tauri v2) — Arch Linux
+
+One-time deps + Rust, then the app runs as a real native window
+(~3–10 MB ROM, ~40–80 MB RAM idle — small because it reuses the system
+WebKitGTK instead of bundling Chromium):
+
+```bash
+# Arch / Manjaro system deps
+sudo pacman -Syu
+sudo pacman -S --needed webkit2gtk-4.1 base-devel curl wget file \
+  openssl appmenu-gtk-module libappindicator-gtk3 librsvg xdotool
+
+# Rust toolchain
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+# restart your shell, then:
+rustup default stable
+
+# run / build
+npm install
+npm run tauri:dev     # native window with HMR
+npm run tauri:build   # deb / rpm / AppImage in src-tauri/target/release/bundle
+```
+
+How the shell works:
+- `src-tauri/` — Rust crate: hosts the front-end and exposes native
+  commands (`open_tab`, `close_tab`, `tab_navigate`, `tab_reload`).
+- `src/native.js` — front-end bridge: in the desktop shell, opening a
+  session/bookmark/search creates a **real Tauri tab window**; in the
+  web preview it falls back to a browser tab. See [ENGINE.md](./ENGINE.md).
 
 ## Project structure
 
@@ -90,7 +122,13 @@ npm run check      # lint + tests + production build  ← run before commit
 │   └── *.test.jsx              # interaction + unit tests
 ├── ARCHITECTURE.md             # design + perf decisions
 ├── BUGLOG.md                   # bugs found → fixes → verification
-├── ENGINE.md                   # real-engine research + roadmap (Tauri/Servo)
+├── ENGINE.md                   # engine research + RAM/ROM comparison + roadmap
+├── src-tauri/                  # Tauri v2 desktop shell (Rust)
+│   ├── src/lib.rs              # native commands: open/close/navigate/reload tabs
+│   ├── tauri.conf.json         # window, devUrl, bundle targets
+│   ├── capabilities/default.json
+│   ├── Cargo.toml
+│   └── icons/                  # generated icon set (tauri icon)
 └── index.jsx, 2IMPROVEDindex.jsx, 3MOREIMPROVEDindex.jsx
                                 # archived single-file drafts (unmaintained)
 ```

@@ -8,7 +8,8 @@
  * - Long URLs wrap on narrow screens (break-words) instead of
  *   pushing horizontal scroll.
  */
-import { openExternalUrl, prettifyUrl, resolveHistoryTarget } from '../utils.js';
+import { openSessionTab } from '../native.js';
+import { prettifyUrl, resolveHistoryTarget } from '../utils.js';
 
 /**
  * @param {{
@@ -36,7 +37,7 @@ export default function HistoryView({ items, onBack }) {
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                openExternalUrl(resolveHistoryTarget(item.name));
+                openSessionTab(resolveHistoryTarget(item.name), item.name);
               }}
               title="Open in new tab"
               className={`block w-full cursor-pointer break-words py-1 text-base transition-transform duration-300 hover:scale-[1.025] md:text-2xl ${

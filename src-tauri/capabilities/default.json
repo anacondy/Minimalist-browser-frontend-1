@@ -1,0 +1,9 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Permissions for the main browser-chrome window. Tab windows are created from Rust (app commands need no ACL entry); remote pages inside them never get Tauri IPC access — that isolation is intentional.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default"
+  ]
+}

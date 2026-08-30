@@ -34,10 +34,10 @@ import { useNow } from './hooks/useNow.js';
 import { useViewShortcuts } from './hooks/useViewShortcuts.js';
 import { useTypingCapture } from './hooks/useTypingCapture.js';
 import { useLocalPreference } from './hooks/useLocalPreference.js';
+import { openSessionTab } from './native.js';
 import {
   buildSearchUrl,
   normalize,
-  openExternalUrl,
   reloadPage,
   resolveHistoryTarget,
 } from './utils.js';
@@ -280,17 +280,19 @@ export default function App() {
       const pool = filtered[activeView] ?? [];
       const first = pool[0];
       if (first) {
-        openExternalUrl(
+        // Real tab in the desktop shell, browser tab in the preview.
+        openSessionTab(
           activeView === VIEWS.HISTORY
             ? resolveHistoryTarget(first.name)
             : first.url,
+          first.title ?? first.name,
         );
         return;
       }
     }
 
     // Default: real web search (Google) in a new tab.
-    openExternalUrl(buildSearchUrl(q));
+    openSessionTab(buildSearchUrl(q), q);
     setSearchQuery(''); // Search bar resets after submit.
   }, [activeView, filtered, searchQuery]);
 

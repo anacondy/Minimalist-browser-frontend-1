@@ -1,0 +1,41 @@
+# Cargo manifest — SYS® Minimalist Browser (Tauri v2 shell)
+# ------------------------------------------------------------------
+# Wires the existing React/Vite front-end into a lightweight native
+# desktop shell. Linux uses WebKitGTK 4.1 (system-wide, shared), so the
+# shipped binary stays tiny (~3–10 MB ROM, ~40–80 MB RAM idle).
+#
+# Arch Linux deps (one-time):
+#   sudo pacman -S --needed webkit2gtk-4.1 base-devel curl wget file \
+#     openssl appmenu-gtk-module libappindicator-gtk3 librsvg xdotool
+[package]
+name = "sys-browser"
+version = "0.1.0"
+description = "SYS® — minimalist browser front-end in a Tauri v2 desktop shell"
+authors = ["SYS®"]
+license = "MIT"
+edition = "2021"
+rust-version = "1.77"
+
+# The library crate is required for mobile entry-points (iOS/Android)
+# and keeps desktop main.rs trivial.
+[lib]
+name = "sys_browser_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+
+[features]
+# Used by `tauri build` (embedded assets, no dev server).
+# DO NOT REMOVE — the Tauri CLI expects it for production builds.
+custom-protocol = ["tauri/custom-protocol"]
+
+# Highly recommended for Linux: LTO + thin binaries, small RAM footprint.
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = true
