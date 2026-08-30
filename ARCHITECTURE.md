@@ -30,6 +30,7 @@ src/
 │                       openExternalUrl, prettifyUrl, resolveHistoryTarget.
 ├── components/
 │   ├── TopNav.jsx      Status bar: brand/home + view switcher.
+│   ├── TabStrip.jsx    Persistent browser tab bar (active-tab chrome).
 │   ├── HomeView.jsx    Hero (SYS®) — typography only, zero assets.
 │   ├── TabsView.jsx    Staggered session list (scrollable).
 │   ├── HistoryView.jsx Cast-list history (scrollable).
@@ -145,7 +146,11 @@ View switching keeps a **back/forward stack** (`backStackRef` /
 `forwardStackRef`, capped at 50) so:
 
 - `Alt+←` pops the previous view; `Alt+→` redoes it.
-- `Ctrl+Tab` / `Ctrl+Shift+Tab` cycle `VIEW_ORDER`.
+- **`Ctrl+Tab` / `Ctrl+Shift+Tab` cycle the OPEN TABS (sessions) only** —
+  `<TabStrip />` is the persistent tab bar and `activeTabId` is the
+  selected session. Panels (home/tabs/hist/bkmk/cfg) are switched
+  exclusively by TopNav, `Ctrl+H/B/,` or `Alt+←/→` — copying how a real
+  browser separates tab-cycling from chrome navigation.
 - `Ctrl+R` = soft refresh: clear the filter + reset scroll in place
   (no reload — mock data is static; a real data fetch plugs in here).
 - `Ctrl+Shift+R` = hard refresh: full page reload (injectable impl for

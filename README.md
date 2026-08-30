@@ -23,12 +23,15 @@ three loose JSX drafts into a proper, tested project.
 - **Live search filtering** — one global search dock filters Tabs,
   History and Bookmarks as you type; `Enter` opens the first match
   (or a web search from the start page).
+- **Browser tab bar** — a persistent tab strip shows every open session
+  (01/MAIN, 02/DOCS, …); the active tab is highlighted, click to switch.
 - **Universal keys** (see `src/hooks/useViewShortcuts.js`):
   `Ctrl/Cmd+L` (URL/search), `Ctrl/Cmd+K` (filter/focus),
-  `Alt+← / Alt+→` (back/forward), `Ctrl+R` (soft refresh),
-  `Ctrl+Shift+R` (hard refresh), `Ctrl+Tab / Ctrl+Shift+Tab`
-  (next/previous view), `Ctrl/Cmd+H` (history), `Ctrl/Cmd+B` (bookmarks),
-  `Ctrl/Cmd+,` (settings), `Esc` (clear → close).
+  `Alt+← / Alt+→` (back/forward across panels), `Ctrl+R` (soft refresh),
+  `Ctrl+Shift+R` (hard refresh), **`Ctrl+Tab / Ctrl+Shift+Tab`
+  (next/previous OPEN TAB — real-browser semantics, never the panels)**,
+  `Ctrl/Cmd+H` (history), `Ctrl/Cmd+B` (bookmarks), `Ctrl/Cmd+,` (settings),
+  `Esc` (clear → close).
 - **Mock account sync** — guest vs. synced datasets toggle in Settings,
   with more rows to demonstrate smooth scrolling.
 - **Persistent preferences** — search-dock alignment survives reload

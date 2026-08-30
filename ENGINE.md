@@ -25,7 +25,27 @@ Electron, and not a hand-rolled CEF port.
 | Dev cost | JS-only | small Rust seam | **high** (engine is pre-1.0, docs young) |
 | Security model | Chromium sandbox | least-privilege permissions | memory-safe by construction |
 
-Sources: Tauri/Electron footprint & trade-offs ([1](https://rustify.rs/articles/rust-tauri-vs-electron-2026), [2](https://www.pkgpulse.com/guides/electron-vs-tauri-2026), [3](https://techloghub.com/compare/tauri-vs-electron)); Tauri's Linux/Arch deps — `webkit2gtk-4.1`, `base-devel`, `openssl`, `librsvg`, `xdotool` ([4](https://tauri.app/start/prerequisites/), [5](https://tauri.app/blog/tauri-2-0-0-alpha-3/)); Servo 0.1.0/0.4.0 embeddable Rust engine + LTS + servoshell/Verso ([6](https://byteiota.com/servo-0-1-0-ships-on-crates-io-embeddable-rust-browser/), [7](https://en.wikipedia.org/wiki/Servo_(software)), [8](https://book.servo.org/), [9](https://github.com/servo/servo/discussions/28608)); WebKitGTK-on-Linux perf caveats ([10](https://news.ycombinator.com/item?id=41565888)).
+Sources: Tauri/Electron footprint & trade-offs ([1](https://rustify.rs/articles/rust-tauri-vs-electron-2026), [2](https://www.pkgpulse.com/guides/electron-vs-tauri-2026), [3](https://techloghub.com/compare/tauri-vs-electron)); Tauri's Linux/Arch deps — `webkit2gtk-4.1`, `base-devel`, `openssl`, `librsvg`, `xdotool` ([4](https://tauri.app/start/prerequisites/), [5](https://tauri.app/blog/tauri-2-0-0-alpha-3/)); Servo 0.1.0/0.4.0 embeddable Rust engine + LTS + servoshell/Verso ([6](https://byteiota.com/servo-0-1-0-ships-on-crates-io-embeddable-rust-browser/), [7](https://en.wikipedia.org/wiki/Servo_(software)), [8](https://book.servo.org/), [9](https://github.com/servo/servo/discussions/28608)); WebKitGTK-on-Linux perf caveats ([10](https://news.ycombinator.com/item?id=41565888)); numbers in §1.1: ([11](https://www.reddit.com/r/rust/comments/1t6fw7s/servofetch_embedding_the_servo_browser_engine_as/), [12](https://hn.nuxt.dev/item/45643357), [13](https://news.ycombinator.com/item?id=25125325), [14](https://tech-insider.org/tauri-vs-electron-2026/), [15](https://blog.openreplay.com/comparing-electron-tauri-desktop-applications/), [16](https://github.com/cjpais/Handy/issues/1279)).
+
+## 1.1 Tauri v2 shell vs Servo — RAM & ROM, the honest numbers
+
+"ROM" = disk/installer footprint; "RAM" = resident memory at idle / per page.
+These are community-measured ranges for comparable minimal apps; measure
+your own build before committing either.
+
+| Metric | Tauri v2 shell (WebKitGTK) | Servo (embedded engine) |
+| --- | --- | --- |
+| **App installer (ROM)** | **~3–10 MB**; deb/rpm ~4 MB because WebKitGTK is a system dep; AppImage ~76 MB (it embeds WebKitGTK) ([14](https://tech-insider.org/tauri-vs-electron-2026/), [15](https://blog.openreplay.com/comparing-electron-tauri-desktop-applications/)) | **30–72 MB binary** for an embedded engine app (30 MB compressed); full servoshell desktop app ~270 MB; minimal custom (no JS engine) builds ~10–15 MB ([11](https://www.reddit.com/r/rust/comments/1t6fw7s/servofetch_embedding_the_servo_browser_engine_as/), [12](https://hn.nuxt.dev/item/45643357)) |
+| **System deps** | `webkit2gtk-4.1` (already installed once on Arch, shared by every WebKitGTK app — not duplicated per app) | none — self-contained Rust engine, but *your app ships the whole engine* (no sharing) |
+| **Idle RAM** | **~20–80 MB** typical (42 MB measured single-window; ~80 MB heavy window) ([14](https://tech-insider.org/tauri-vs-electron-2026/), [15](https://blog.openreplay.com/comparing-electron-tauri-desktop-applications/), [1](https://rustify.rs/articles/rust-tauri-vs-electron-2026)); the WebKitWebProcess adds real content cost — some WebKitGTK apps seen at ~250 MB after a fresh launch, and it can be leak-prone ([16](https://github.com/cjpais/Handy/issues/1279)) | **~100 MB+ even for simple pages** (older measurement, still the honest ballpark) ([13](https://news.ycombinator.com/item?id=25125325)); real-world pages measure **"a bit higher than Firefox with the same tabs"** → expect ~200–400 MB on JS-heavy sites ([12](https://hn.nuxt.dev/item/45643357)); ~3× less RAM than Ladybird ([12](https://hn.nuxt.dev/item/45643357)) |
+| **Startup** | **~190–380 ms** ([14](https://tech-insider.org/tauri-vs-electron-2026/), [2](https://rustify.rs/articles/rust-tauri-vs-electron-2026)) | no official published figure; engine-sized init, generally comparable but unmeasured here |
+| **Linux/Arch fit** | excellent — official pacman dep, tiny binary | excellent build-wise (`cargo`), but heavier per-app ROM and 0.x web compatibility |
+| **Who it wins for** | **smallest ROM + lowest typical RAM** on Arch, right now | **independence** (no WebKit dep, memory-safe, parallel) + full control, later |
+
+### The key insight
+- **Tauri v2 wins ROM + typical idle RAM.** ~4 MB deb. RAM numbers stay low because the UI is one lightweight web page and the system WebKitGTK is *shared*.
+- **Servo is NOT automatically "lighter."** Its engine costs **30–72 MB ROM** (270 MB for the demo browser) and **~100–400 MB RAM for real pages** — the "lightweight" story is *no Chromium/Node bundled*, not *less per-page memory* ([11](https://www.reddit.com/r/rust/comments/1t6fw7s/servofetch_embedding_the_servo_browser_engine_as/), [12](https://hn.nuxt.dev/item/45643357), [13](https://news.ycombinator.com/item?id=25125325)).
+- So: **Tauri v2 (WebKitGTK) for the Arch-first, light-RAM/ROM product now; Servo only if we later want engine ownership (or a truly dependency-free build) and can accept its size/compat profile.**
 
 ## 2. Why **not** Electron (for this project)
 

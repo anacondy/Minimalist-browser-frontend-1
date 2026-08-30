@@ -47,6 +47,7 @@ is green (lint + 19 tests + production build).
 | B12 | Hard refresh coupled to `location.reload` (untestable in jsdom) | `reloadPage` via injectable `setReloadImpl` |
 | B13 | Duplicate "Home" accessible names after adding the chip | Single HOME nav item; brand keeps its own distinct label |
 | B14 | `TRANSITIONS.SETTINGS` used a Tailwind class as an inline transform | Corrected to `'none'` (valid CSS) |
+| B15 | Ctrl+Tab cycled the UI **panels** (home/tabs/hist/bkmk/cfg) — not browser tabs | New `activeTabId` state + `<TabStrip />`; `Ctrl+Tab`/`Ctrl+Shift+Tab` now cycle OPEN TABS only; panels keep their own TopNav/Alt+←/→ navigation; tests assert "switch tabs, never panels" |
 
 ## C. Verification matrix
 

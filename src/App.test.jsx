@@ -263,7 +263,7 @@ describe('SYS® Minimalist Browser — interactions', () => {
     );
   });
 
-  it('universal keys: Ctrl+L focus, Ctrl+K filter, Ctrl+Tab cycle', async () => {
+  it('universal keys: Ctrl+L focus and Ctrl+K focus', async () => {
     const { user } = setup();
     render(<App />);
 
@@ -273,21 +273,56 @@ describe('SYS® Minimalist Browser — interactions', () => {
     await user.keyboard('{Control>}l{/Control}');
     await waitFor(() => expect(document.activeElement).toBe(searchInput()));
 
-    // Ctrl+Tab cycles: history → bookmarks → settings → main → tabs…
-    await user.keyboard('{Control>}{Tab}');
-    expectView('bookmarks', true);
-    await user.keyboard('{Control>}{Tab}');
-    expectView('settings', true);
-    await user.keyboard('{Control>}{Tab}');
-    expectView('main', true);
-    await user.keyboard('{Control>}{Tab}');
-    expectView('tabs', true);
-    await user.keyboard('{Control>}{Shift>}{Tab}{/Shift}{/Control}');
-    expectView('main', true);
-
     // Ctrl+K focuses the dock (any view).
     await user.keyboard('{Control>}k{/Control}');
     await waitFor(() => expect(document.activeElement).toBe(searchInput()));
+  });
+
+  it('Ctrl+Tab switches OPEN TABS — never the panels', async () => {
+    const { user } = setup();
+    render(<App />);
+
+    const tab1 = screen.getByRole('tab', { name: /Switch to YOUTUBE MUSIC/ });
+    const tab2 = screen.getByRole('tab', { name: /Switch to PHYSICS SEMESTER/ });
+    expect(tab1.getAttribute('aria-selected')).toBe('true');
+    expect(tab2.getAttribute('aria-selected')).toBe('false');
+
+    // Ctrl+Tab → next open tab; the active VIEW must not change (main).
+    await user.keyboard('{Control>}{Tab}');
+    expect(tab2.getAttribute('aria-selected')).toBe('true');
+    expect(tab1.getAttribute('aria-selected')).toBe('false');
+    expectView('main', true); // panels untouched
+
+    // Inside the sessions panel, the active row is highlighted too.
+    await user.click(screen.getByRole('button', { name: 'Open sessions' }));
+    expect(
+      screen.getByRole('button', { name: 'Open PHYSICS SEMESTER NOTES' })
+        .getAttribute('aria-current'),
+    ).toBe('true');
+
+    // Ctrl+Shift+Tab → previous tab.
+    await user.keyboard('{Control>}{Shift>}{Tab}{/Shift}{/Control}');
+    expect(tab1.getAttribute('aria-selected')).toBe('true');
+
+    // Wraps: Ctrl+Shift+Tab from the first tab lands on the last one.
+    await user.keyboard('{Control>}{Shift>}{Tab}{/Shift}{/Control}');
+    expect(tab2.getAttribute('aria-selected')).toBe('true');
+
+    // And Ctrl+Tab from the last tab wraps to the first.
+    await user.keyboard('{Control>}{Tab}');
+    expect(tab1.getAttribute('aria-selected')).toBe('true');
+  });
+
+  it('clicking a tab in the strip activates it', async () => {
+    const { user } = setup();
+    render(<App />);
+
+    await user.click(screen.getByRole('tab', { name: /Switch to PHYSICS SEMESTER/ }));
+    expect(
+      screen.getByRole('tab', { name: /Switch to PHYSICS SEMESTER/ }).getAttribute('aria-selected'),
+    ).toBe('true');
+    // Panel still on home — the tab bar is chrome, not a panel switch.
+    expectView('main', true);
   });
 
   it('universal keys: Alt+←/→ back/forward navigation', async () => {

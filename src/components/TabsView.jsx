@@ -21,10 +21,11 @@ const clampOffset = (rem) => Math.max(0, Math.min(rem, 6)); // 0–96px
 /**
  * @param {{
  *   tabs: Array<{id:number,label:string,title:string,offset:number,url:string}>,
+ *   activeTabId: number | null,
  *   onBack: () => void,
  * }} props
  */
-export default function TabsView({ tabs, onBack }) {
+export default function TabsView({ tabs, activeTabId, onBack }) {
   return (
     // Blank-area click → home. Clicks on the panel background bubble
     // here; item clicks stopPropagation (see below).
@@ -46,32 +47,43 @@ export default function TabsView({ tabs, onBack }) {
             NO SESSIONS MATCHING QUERY.
           </p>
         ) : (
-          tabs.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={(e) => {
-                // Item click = open the session, never "back".
-                e.stopPropagation();
-                openExternalUrl(tab.url);
-              }}
-              title={`Open ${tab.url}`}
-              // Explicit accessible name (button text is visual only).
-              aria-label={`Open ${tab.title}`}
-              className="group flex w-full items-end gap-4 text-left transition-colors duration-300 hover:text-white md:gap-6"
-              style={{ paddingLeft: `${clampOffset(tab.offset)}rem` }}
-            >
-              <span className="mb-1 shrink-0 font-mono text-[10px] tracking-widest text-neutral-500 md:text-xs">
-                {tab.label}
-              </span>
-              <span
-                className="truncate font-bold tracking-tight text-neutral-300 transition-all duration-500 group-hover:tracking-widest group-hover:text-white"
-                style={{ fontSize: 'clamp(1.25rem, 2.5vw + 0.75rem, 2.25rem)' }}
+          tabs.map((tab) => {
+            // The session that Ctrl+Tab / the tab bar selected lights up.
+            const isActiveTab = tab.id === activeTabId;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={(e) => {
+                  // Item click = open the session, never "back".
+                  e.stopPropagation();
+                  openExternalUrl(tab.url);
+                }}
+                title={`Open ${tab.url}`}
+                // Explicit accessible name (button text is visual only).
+                aria-label={`Open ${tab.title}`}
+                aria-current={isActiveTab ? 'true' : undefined}
+                className="group flex w-full items-end gap-4 text-left transition-colors duration-300 hover:text-white md:gap-6"
+                style={{ paddingLeft: `${clampOffset(tab.offset)}rem` }}
               >
-                {tab.title}
-              </span>
-            </button>
-          ))
+                <span
+                  className={`mb-1 shrink-0 font-mono text-[10px] tracking-widest md:text-xs ${
+                    isActiveTab ? 'text-white' : 'text-neutral-500'
+                  }`}
+                >
+                  {tab.label}
+                </span>
+                <span
+                  className={`truncate font-bold tracking-tight transition-all duration-500 group-hover:tracking-widest group-hover:text-white ${
+                    isActiveTab ? 'text-white' : 'text-neutral-300'
+                  }`}
+                  style={{ fontSize: 'clamp(1.25rem, 2.5vw + 0.75rem, 2.25rem)' }}
+                >
+                  {tab.title}
+                </span>
+              </button>
+            );
+          })
         )}
       </div>
     </div>

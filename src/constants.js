@@ -21,21 +21,13 @@ export const SEARCH_POSITION = Object.freeze({
   BOTTOM: 'bottom',
 });
 
-/** Order used by Ctrl+Tab / Ctrl+Shift+Tab cycling. */
-export const VIEW_ORDER = Object.freeze([
-  VIEWS.MAIN,
-  VIEWS.TABS,
-  VIEWS.HISTORY,
-  VIEWS.BOOKMARKS,
-  VIEWS.SETTINGS,
-]);
-
 /** Keyboard shortcuts shown in Settings — documented next to the
  *  actual handler in useViewShortcuts.js. */
 export const SHORTCUTS = Object.freeze([
   { keys: 'CTRL + L', action: 'URL / SEARCH' },
   { keys: 'CTRL + K', action: 'FILTER / FOCUS' },
-  { keys: 'CTRL + TAB', action: 'NEXT VIEW' },
+  { keys: 'CTRL + TAB', action: 'NEXT TAB' },
+  { keys: 'CTRL + SHIFT + TAB', action: 'PREV TAB' },
   { keys: 'ALT + ←/→', action: 'BACK / FWD' },
   { keys: 'CTRL + R', action: 'REFRESH' },
   { keys: 'CTRL + SHIFT + R', action: 'HARD REFRESH' },

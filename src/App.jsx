@@ -20,6 +20,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import TopNav from './components/TopNav.jsx';
+import TabStrip from './components/TabStrip.jsx';
 import HomeView from './components/HomeView.jsx';
 import TabsView from './components/TabsView.jsx';
 import HistoryView from './components/HistoryView.jsx';
@@ -28,7 +29,7 @@ import SettingsView from './components/SettingsView.jsx';
 import SearchDock from './components/SearchDock.jsx';
 
 import { GUEST_DATA, SYNCED_DATA } from './data.js';
-import { SEARCH_POSITION, VIEW_ORDER, VIEWS } from './constants.js';
+import { SEARCH_POSITION, VIEWS } from './constants.js';
 import { useNow } from './hooks/useNow.js';
 import { useViewShortcuts } from './hooks/useViewShortcuts.js';
 import { useTypingCapture } from './hooks/useTypingCapture.js';
@@ -84,6 +85,12 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isAccountSynced, setIsAccountSynced] = useState(false);
 
+  // ACTIVE BROWSER TAB (like a real browser): Ctrl+Tab cycles through
+  // the open sessions only — never through the UI panels. The element
+  // that owns the tab bar is <TabStrip />; panels are switched
+  // exclusively by TopNav / shortcuts and Alt+←/→.
+  const [activeTabId, setActiveTabId] = useState(() => GUEST_DATA.tabs[0]?.id ?? null);
+
   // Dock placement persists across reloads (localStorage-backed).
   const [searchPosition, setSearchPosition] = useLocalPreference(
     'sys.search-position',
@@ -101,6 +108,13 @@ export default function App() {
   /* --------------------------- derived data --------------------------- */
   // Profiled dataset (guest vs synced) — frozen module constants.
   const dataset = isAccountSynced ? SYNCED_DATA : GUEST_DATA;
+
+  // Resolve the active tab against the current dataset. If the stored
+  // id no longer exists (e.g. profile switch), fall back to the first
+  // tab WITHOUT writing state — pure derivation keeps rendering safe.
+  const activeTab =
+    dataset.tabs.find((t) => t.id === activeTabId) ?? dataset.tabs[0] ?? null;
+  const effectiveActiveTabId = activeTab?.id ?? null;
 
   // Live filtering — recomputed only when the query or profile changes.
   const filtered = useMemo(() => {
@@ -152,15 +166,20 @@ export default function App() {
     setActiveView(next);
   }, []);
 
-  /** Ctrl+Tab / Ctrl+Shift+Tab — cycle through the five views. */
-  const cycleView = useCallback(
+  /**
+   * Ctrl+Tab / Ctrl+Shift+Tab — cycle through the OPEN TABS (sessions),
+   * exactly like a real browser. Never touches the UI panels; the
+   * active tab is reflected in <TabStrip /> and the sessions list.
+   */
+  const cycleTab = useCallback(
     (step) => {
-      const index = VIEW_ORDER.indexOf(activeViewRef.current);
-      const next =
-        VIEW_ORDER[(index + step + VIEW_ORDER.length) % VIEW_ORDER.length];
-      navigate(next);
+      const tabs = dataset.tabs;
+      if (tabs.length === 0) return;
+      const index = tabs.findIndex((t) => t.id === effectiveActiveTabId);
+      const next = tabs[(index + step + tabs.length) % tabs.length];
+      if (next) setActiveTabId(next.id);
     },
-    [navigate],
+    [dataset, effectiveActiveTabId],
   );
 
   /* ---------------------- search / omnibox typing --------------------- */
@@ -230,15 +249,16 @@ export default function App() {
         case 'clear-search': handleClearSearch(); break;
         case 'back': goBack(); break;
         case 'forward': goForward(); break;
-        case 'next-view': cycleView(1); break;
-        case 'prev-view': cycleView(-1); break;
+        // Browser semantics: Ctrl+Tab switches TABS, not panels.
+        case 'next-tab': cycleTab(1); break;
+        case 'prev-tab': cycleTab(-1); break;
         case 'refresh': handleRefresh(false); break;
         case 'hard-refresh': handleRefresh(true); break;
         default: break;
       }
     },
     [
-      cycleView,
+      cycleTab,
       goBack,
       goForward,
       handleClearSearch,
@@ -279,6 +299,14 @@ export default function App() {
     <div className="app-root select-text text-neutral-200 selection:bg-white selection:text-black">
       <TopNav activeView={activeView} onNavigate={navigate} now={now} />
 
+      {/* Browser tab bar — persists across every panel. Ctrl+Tab and
+          clicks switch the ACTIVE TAB here; panels stay untouched. */}
+      <TabStrip
+        tabs={dataset.tabs}
+        activeTabId={effectiveActiveTabId}
+        onSelect={setActiveTabId}
+      />
+
       {/* MAIN — hero start page */}
       <ViewPanel active={activeView === VIEWS.MAIN} view={VIEWS.MAIN}>
         <HomeView />
@@ -286,7 +314,11 @@ export default function App() {
 
       {/* TABS — open sessions (blank area click → home) */}
       <ViewPanel active={activeView === VIEWS.TABS} view={VIEWS.TABS}>
-        <TabsView tabs={filtered.tabs} onBack={goHome} />
+        <TabsView
+          tabs={filtered.tabs}
+          activeTabId={effectiveActiveTabId}
+          onBack={goHome}
+        />
       </ViewPanel>
 
       {/* HISTORY (blank area click → home) */}

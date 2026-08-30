@@ -6,7 +6,8 @@
  *   ALT + ← / ALT + →   navigate back / forward in view history
  *   CTRL + R            soft refresh (reset filter + scroll)
  *   CTRL + SHIFT + R    hard refresh (reload app)
- *   CTRL + TAB          next view   ·  CTRL + SHIFT + TAB  previous view
+ *   CTRL + TAB          NEXT OPEN TAB (browser semantics — never panels)
+ *   CTRL + SHIFT + TAB  PREVIOUS OPEN TAB
  *   CTRL/CMD + H        history · CTRL/CMD + B bookmarks · CTRL/CMD + , config
  *   ESC                 clear field, else close back to home
  *
@@ -39,9 +40,11 @@ export function useViewShortcuts({ onAction, searchInputRef }) {
       const fire = (action) => actionRef.current?.(action);
 
       // --- Modifier combos (browser-level chrome shortcuts) ---
+      // Ctrl+Tab = NEXT OPEN TAB (1), Ctrl+Shift+Tab = PREVIOUS (-1).
+      // Panels (home/tabs/hist/bkmk/cfg) are NOT cycled here.
       if (mod && key === 'Tab') {
         e.preventDefault();
-        fire(e.shiftKey ? 'prev-view' : 'next-view');
+        fire(e.shiftKey ? 'prev-tab' : 'next-tab');
         return;
       }
       if (mod && e.shiftKey && lower === 'r') {
