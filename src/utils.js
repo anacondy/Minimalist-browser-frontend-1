@@ -7,11 +7,18 @@ export const normalize = (value) => (
   typeof value === 'string' ? value.trim().toLowerCase() : ''
 );
 
-/** Build a Google search URL from a raw query (safe via encodeURIComponent). */
+/**
+ * Build a search URL from a raw query (safe via encodeURIComponent).
+ * DuckDuckGo LITE is used on purpose:
+ *  - extremely light (no JS/ads/tracking) → fast even in a VM, keeps
+ *    the SYS® shell fluid;
+ *  - no Google reCAPTCHA wall (Google blocks WebKitGTK/VPN traffic).
+ * It renders in our dark theme via the injected stylesheet.
+ */
 export const buildSearchUrl = (query) => {
   const q = query.trim();
   if (!q) return null;
-  return `https://www.google.com/search?q=${encodeURIComponent(q)}`;
+  return `https://lite.duckduckgo.com/lite/?q=${encodeURIComponent(q)}`;
 };
 
 /**

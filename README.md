@@ -23,8 +23,15 @@ three loose JSX drafts into a proper, tested project.
 - **Live search filtering** — one global search dock filters Tabs,
   History and Bookmarks as you type; `Enter` opens the first match
   (or a web search from the start page).
-- **Browser tab bar** — a persistent tab strip shows every open session
-  (01/MAIN, 02/DOCS, …); the active tab is highlighted, click to switch.
+- **Browser tab bar** — a persistent tab strip shows every open tab
+  (HOME + real sessions); the active tab is highlighted, click to switch,
+  `+` / `Ctrl+T` opens a new one, `Ctrl+W` closes the active one.
+- **In-app browsing (desktop shell)** — pages render INSIDE the SYS®
+  window as embedded webviews (single window, no pop-up apps). Search
+  uses **DuckDuckGo Lite** (light, no reCAPTCHA wall, ideal in a VM),
+  and every page gets our **black/mono dark theme** injected with a
+  white-flash-free loader. Tab titles + history update in real time
+  (streamed from Rust via `tab://updated` events).
 - **Universal keys** (see `src/hooks/useViewShortcuts.js`):
   `Ctrl/Cmd+L` (URL/search), `Ctrl/Cmd+K` (filter/focus),
   `Alt+← / Alt+→` (back/forward across panels), `Ctrl+R` (soft refresh),
@@ -157,6 +164,29 @@ How the shell works:
   and during the rebuild, with fixes and how they were verified.
 - **[ENGINE.md](./ENGINE.md)** — "how do we add a real engine?" research:
   Electron vs Tauri vs Servo on Linux/Arch, with a staged recommendation.
+
+## Troubleshooting (Linux / virtual machines)
+
+**Laggy rendering or a white/blank page inside tabs (VirtualBox, VMs, old GPUs):**
+WebKitGTK's DMABUF/GL path can misbehave on virtual GPUs. Run with software
+rendering to make the shell fluid:
+
+```bash
+WEBKIT_DISABLE_DMABUF_RENDERER=1 npm run tauri:dev
+# or, if still glitchy:
+WEBKIT_DISABLE_COMPOSITING_MODE=1 npm run tauri:dev
+```
+
+**Generic "W" icon in the taskbar instead of SYS®:** the app now sets the
+window icon explicitly in `src-tauri/src/lib.rs` (from `icons/128x128.png`).
+If you still see a generic glyph, it's the *launcher* icon (`.desktop` file)
+— run `npm run tauri:build` and install the `.deb`/`.rpm` for the proper
+menu/taskbar entry.
+
+**Search shows reCAPTCHA / "unusual traffic":** we switched the default
+engine to DuckDuckGo Lite (`lite.duckduckgo.com`) precisely to avoid
+Google's bot wall on WebKitGTK/VPN traffic. If you ever want Google back,
+change `buildSearchUrl()` in `src/utils.js`.
 
 ## License
 

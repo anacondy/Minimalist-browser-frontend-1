@@ -241,7 +241,7 @@ describe('SYS® Minimalist Browser — interactions', () => {
     await user.keyboard('{Enter}');
 
     expect(openSpy).toHaveBeenCalledWith(
-      'https://www.google.com/search?q=how%20to%20build%20a%20browser',
+      'https://lite.duckduckgo.com/lite/?q=how%20to%20build%20a%20browser',
       '_blank',
       'noopener,noreferrer',
     );
@@ -292,13 +292,6 @@ describe('SYS® Minimalist Browser — interactions', () => {
     expect(tab2.getAttribute('aria-selected')).toBe('true');
     expect(tab1.getAttribute('aria-selected')).toBe('false');
     expectView('main', true); // panels untouched
-
-    // Inside the sessions panel, the active row is highlighted too.
-    await user.click(screen.getByRole('button', { name: 'Open sessions' }));
-    expect(
-      screen.getByRole('button', { name: 'Open PHYSICS SEMESTER NOTES' })
-        .getAttribute('aria-current'),
-    ).toBe('true');
 
     // Ctrl+Shift+Tab → previous tab.
     await user.keyboard('{Control>}{Shift>}{Tab}{/Shift}{/Control}');

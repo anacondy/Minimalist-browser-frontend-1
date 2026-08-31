@@ -48,7 +48,13 @@ is green (lint + 19 tests + production build).
 | B13 | Duplicate "Home" accessible names after adding the chip | Single HOME nav item; brand keeps its own distinct label |
 | B14 | `TRANSITIONS.SETTINGS` used a Tailwind class as an inline transform | Corrected to `'none'` (valid CSS) |
 | B15 | Ctrl+Tab cycled the UI **panels** (home/tabs/hist/bkmk/cfg) — not browser tabs | New `activeTabId` state + `<TabStrip />`; `Ctrl+Tab`/`Ctrl+Shift+Tab` now cycle OPEN TABS only; panels keep their own TopNav/Alt+←/→ navigation; tests assert "switch tabs, never panels" |
-| B16 | No desktop integration at all (web-only) | Tauri v2 shell scaffolded & wired: `src-tauri/` Rust commands (`open_tab`, `close_tab`, `tab_navigate`, `tab_reload`), `src/native.js` bridge with browser fallback, generated icons, `tauri:dev`/`tauri:build` scripts. Sandbox limits (no Rust; crates.io/rustup firewalled) documented in ENGINE.md — first real compile happens on the user's Arch machine |
+| B16 | No desktop integration at all (web-only) | Tauri v2 shell scaffolded & wired: `src-tauri/` Rust commands, `src/native.js` bridge with browser fallback, generated icons, `tauri:dev`/`tauri:build` scripts. Sandbox limits documented in ENGINE.md — first real compile happens on the user's Arch machine |
+| B17 | Every search opened a NEW OS window (`window.open`) → "many apps" + lag | Single-window multi-webview engine: pages are embedded child webviews inside the ONE SYS® window; address-bar searches REUSE the active tab (`new_tab:false`) so repeated searches never spawn windows |
+| B18 | Content rendered in default white styling, not our aesthetic | Per-tab `initialization_script` injects the dark theme (invert/hue-rotate + mono font + letter-spacing) into every page; no white flash |
+| B19 | Google search → reCAPTCHA wall in WebKitGTK/VM | Default engine switched to **DuckDuckGo Lite** (`lite.duckduckgo.com/lite/?q=`) — light, no bot wall |
+| B20 | Tab strip/history were static mock data (didn't update as we visit) | Rust streams `tab://updated` (title from `on_document_title_changed`, URL from `on_navigation`); React updates tab labels + real visit history in real time |
+| B21 | Generic "W" engine glyph in the KDE taskbar instead of SYS® | Explicit `WebviewWindow::set_icon(Image::from_bytes(include_bytes!(icons/128x128.png)))` in setup; docs note the launcher-icon path for packaged builds |
+| B22 | Laggy rendering in VirtualBox (WebKitGTK DMABUF on virtual GPU) | Documented `WEBKIT_DISABLE_DMABUF_RENDERER=1` / `WEBKIT_DISABLE_COMPOSITING_MODE=1` workarounds in README troubleshooting |
 
 ## C. Verification matrix
 

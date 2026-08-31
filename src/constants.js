@@ -28,6 +28,8 @@ export const SHORTCUTS = Object.freeze([
   { keys: 'CTRL + K', action: 'FILTER / FOCUS' },
   { keys: 'CTRL + TAB', action: 'NEXT TAB' },
   { keys: 'CTRL + SHIFT + TAB', action: 'PREV TAB' },
+  { keys: 'CTRL + T', action: 'NEW TAB' },
+  { keys: 'CTRL + W', action: 'CLOSE TAB' },
   { keys: 'ALT + ←/→', action: 'BACK / FWD' },
   { keys: 'CTRL + R', action: 'REFRESH' },
   { keys: 'CTRL + SHIFT + R', action: 'HARD REFRESH' },
@@ -37,8 +39,8 @@ export const SHORTCUTS = Object.freeze([
   { keys: 'ESC', action: 'CLOSE' },
 ]);
 
-/** URL helpers for the mock social feeds. */
+/** URL helpers — DuckDuckGo Lite keeps results light & bot-wall-free. */
 export const EXTERNAL_LINKS = Object.freeze({
-  GOOGLE_SEARCH: 'https://www.google.com/search?q=',
+  SEARCH: 'https://lite.duckduckgo.com/lite/?q=',
   YOUTUBE_MUSIC: 'https://music.youtube.com/',
 });

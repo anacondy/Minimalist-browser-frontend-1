@@ -65,18 +65,24 @@ and gives us the Rust backend + safe IPC for free.
 
 ### Stage 1 — Tauri v2 shell (ship now, Arch-ready) ✅ WIRED
 - **Frontend = the exact React/Vite app we already have** (works as-is).
-- Shell = Rust + Tauri, window chrome + per-view WebView navigation.
-- **Status in this repo:** scaffolded & wired — `src-tauri/` (Rust
-  commands `open_tab`, `close_tab`, `tab_navigate`, `tab_reload`),
-  `src/native.js` bridge (real tab windows in the shell; browser-tab
-  fallback in the web preview), generated icons, `npm run tauri:dev`
-  / `tauri:build` scripts.
+- Shell = Rust + Tauri — **ONE window, pages embedded as child webviews**
+  (`tauri = { features = ["unstable"] }` unlocks `Window::add_child`).
+  Each open tab is a real webview layered under the SYS® chrome, so
+  searches render inside our UI (no new OS windows), switch in place,
+  and stream live title/URL events to React (`tab://updated`).
+- **Status in this repo:** wired — `src-tauri/` commands (`open_tab`
+  with active-tab reuse, `switch_tab`, `close_tab`, `tab_navigate`,
+  `tab_reload`, `tabs_list`), `src/native.js` bridge with browser
+  fallback, dark-theme initialization script per tab, DuckDuckGo Lite
+  search, explicit window icon, `npm run tauri:dev` / `tauri:build`.
+- **Verified here:** all APIs cross-checked against upstream tauri
+  v2.11.5 source (GitHub API): `Window::add_child` (unstable),
+  `WebviewBuilder::{initialization_script, on_navigation,
+  on_document_title_changed}`, `Webview::{navigate, set_position,
+  set_size, eval, close}`, `WebviewWindow::{set_icon, on_window_event}`,
+  `Emitter` events. Front-end suite: 29/29 tests, build green.
 - **What could NOT be verified in this sandbox:** compiling/running the
-  Rust side. The sandbox has no Rust and its firewall blocks
-  `static.rust-lang.org` + `crates.io` (only GitHub/npm are reachable),
-  so a full `cargo build` is impossible here. Verified instead:
-  `tauri info` parses the config (`tauri 🦀: 2`, icons OK) and the
-  front-end suite runs in browser-fallback mode (29/29 tests). First
+  Rust side (no Rust toolchain; crates.io/rustup firewalled). First
   `npm run tauri:dev` on the user's machine is the real smoke test.
 - Arch install/devel:
   ```bash

@@ -22,9 +22,9 @@ describe('normalize', () => {
 });
 
 describe('buildSearchUrl', () => {
-  it('builds an encoded Google search URL', () => {
+  it('builds an encoded DuckDuckGo Lite search URL', () => {
     expect(buildSearchUrl('lofi hip hop')).toBe(
-      'https://www.google.com/search?q=lofi%20hip%20hop',
+      'https://lite.duckduckgo.com/lite/?q=lofi%20hip%20hop',
     );
   });
 
@@ -56,9 +56,9 @@ describe('resolveHistoryTarget', () => {
     );
   });
 
-  it('falls back to a Google search for non-URL entries', () => {
+  it('falls back to a DuckDuckGo Lite search for non-URL entries', () => {
     expect(resolveHistoryTarget('youtube music - lofi hip hop')).toBe(
-      'https://www.google.com/search?q=youtube%20music%20-%20lofi%20hip%20hop',
+      'https://lite.duckduckgo.com/lite/?q=youtube%20music%20-%20lofi%20hip%20hop',
     );
   });
 });

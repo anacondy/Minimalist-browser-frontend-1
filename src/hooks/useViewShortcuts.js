@@ -8,6 +8,7 @@
  *   CTRL + SHIFT + R    hard refresh (reload app)
  *   CTRL + TAB          NEXT OPEN TAB (browser semantics — never panels)
  *   CTRL + SHIFT + TAB  PREVIOUS OPEN TAB
+ *   CTRL + T            NEW TAB      ·  CTRL + W  CLOSE ACTIVE TAB
  *   CTRL/CMD + H        history · CTRL/CMD + B bookmarks · CTRL/CMD + , config
  *   ESC                 clear field, else close back to home
  *
@@ -55,6 +56,19 @@ export function useViewShortcuts({ onAction, searchInputRef }) {
       if (mod && lower === 'r') {
         e.preventDefault();
         fire('refresh');
+        return;
+      }
+      // Ctrl+T = new browser tab · Ctrl+W = close active tab.
+      // NOTE: Cmd+W closes the browser window in most OS shells; native
+      // tab-close firing is only safe for Ctrl (Windows/Linux).
+      if (mod && !e.metaKey && lower === 't') {
+        e.preventDefault();
+        fire('new-tab');
+        return;
+      }
+      if (mod && !e.metaKey && lower === 'w') {
+        e.preventDefault();
+        fire('close-tab');
         return;
       }
       if (mod && (lower === 'l' || lower === 'k')) {

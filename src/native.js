@@ -1,81 +1,72 @@
 /**
  * native.js — Tauri bridge (browser <-> desktop shell).
  * ------------------------------------------------------------------
- * One abstraction the front-end uses for "open a tab / manage a tab".
- * It has two backends:
+ * One abstraction the front-end uses for tab lifecycle. Two backends:
  *
- *   Tauri (desktop shell)   -> real webview-window tabs via Rust
- *                              commands (src-tauri/src/lib.rs)
- *   Plain browser (preview) -> window.open fallback (no-op, sandbox-safe)
+ *   Tauri (desktop shell)   -> ONE window, tabs are embedded child
+ *                              webviews managed by Rust commands
+ *                              (open/switch/close/navigate/reload).
+ *   Plain browser (preview) -> window.open fallback (sandbox-safe) —
+ *                              the web preview keeps working unchanged.
  *
- * Detection is `window.__TAURI_INTERNALS__` (set by the CLI-injected
- * runtime). `invoke()` is imported lazily-safe: it is only *called*
- * when the detection passes, so this module is import-safe in tests
- * and in the web preview.
+ * The Rust side emits `tab://updated` with the full tab list after
+ * every mutation; React subscribes via `onTabsUpdated()` so the tab
+ * strip + history update in real time (titles arrive from the page).
  */
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import { openExternalUrl } from './utils.js';
 
 /** True when running inside the Tauri desktop shell. */
 export const inTauri = () =>
   typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 
+const safeInvoke = (cmd, args) => invoke(cmd, args).catch((error) => {
+  console.error(`[sys-native] ${cmd} failed:`, error);
+  return null;
+});
+
 /**
  * Open a session/tab.
- * - Desktop shell: create a REAL Tauri tab (webview window) whose label
- *   is returned for later management.
- * - Browser preview: fall back to a new browser tab.
- *
- * @param {string} url  absolute URL to load
- * @param {string} [title] tab title shown in the OS window
- * @returns {Promise<string|null>} window label, or null in browser mode
+ * In the shell: `newTab=false` navigates the ACTIVE tab (browser-style
+ * address bar — repeated searches never spawn extra windows); `newTab
+ * =true` opens a new embedded tab. Returns TabInfo (or null in browser).
  */
-export const openSessionTab = async (url, title = 'NEW SESSION') => {
+export const openSessionTab = async (url, title = 'NEW SESSION', { newTab = true } = {}) => {
   if (!inTauri()) {
     openExternalUrl(url);
     return null;
   }
-  try {
-    // Rust assigns the unique label (`tab-N`).
-    return await invoke('open_tab', { url, title });
-  } catch (error) {
-    // Never break browsing because a native call failed.
-    console.error('[sys-native] open_tab failed, falling back to browser:', error);
-    openExternalUrl(url);
-    return null;
-  }
+  return safeInvoke('open_tab', { url, title, newTab });
 };
 
-/** Close a tab by its window label (Tauri only; silent no-op otherwise). */
-export const closeSessionTab = async (label) => {
-  if (!inTauri() || !label) return;
-  try {
-    await invoke('close_tab', { label });
-  } catch (error) {
-    console.error('[sys-native] close_tab failed:', error);
-  }
-};
+/** Switch the visible embedded tab (`'home'` shows the chrome hero). */
+export const switchSessionTab = (label) =>
+  inTauri() ? safeInvoke('switch_tab', { label }) : Promise.resolve(null);
+
+/** Close an embedded tab. */
+export const closeSessionTab = (label) =>
+  inTauri() ? safeInvoke('close_tab', { label }) : Promise.resolve(null);
+
+/** Page-level back/forward inside a tab. */
+export const navigateSessionTab = (label, direction) =>
+  inTauri() ? safeInvoke('tab_navigate', { label, direction }) : Promise.resolve(null);
+
+/** Soft-reload the page inside a tab. */
+export const reloadSessionTab = (label) =>
+  inTauri() ? safeInvoke('tab_reload', { label }) : Promise.resolve(null);
+
+/** Initial tab list (also streamed via `tab://updated`). */
+export const listTabs = () => (inTauri() ? safeInvoke('tabs_list') : Promise.resolve([]));
 
 /**
- * Navigate a tab window backwards/forwards through its own page history.
- * @param {string} label window label from openSessionTab
- * @param {'back'|'forward'} direction
+ * Subscribe to tab-list updates from Rust.
+ * @param {(tabs: Array<{label:string,title:string,url:string,active:boolean}>) => void} callback
+ * @returns {Promise<() => void>} unsubscribe function
  */
-export const navigateSessionTab = async (label, direction) => {
-  if (!inTauri() || !label) return;
-  try {
-    await invoke('tab_navigate', { label, direction });
-  } catch (error) {
-    console.error('[sys-native] tab_navigate failed:', error);
-  }
-};
-
-/** Reload the page inside a tab window (Tauri only). */
-export const reloadSessionTab = async (label) => {
-  if (!inTauri() || !label) return;
-  try {
-    await invoke('tab_reload', { label });
-  } catch (error) {
-    console.error('[sys-native] tab_reload failed:', error);
-  }
+export const onTabsUpdated = (callback) => {
+  if (!inTauri()) return Promise.resolve(() => {});
+  return listen('tab://updated', (event) => {
+    if (Array.isArray(event.payload)) callback(event.payload);
+  });
 };

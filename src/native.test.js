@@ -37,8 +37,8 @@ describe('native bridge (browser fallback)', () => {
   });
 
   it('management calls are silent no-ops outside Tauri', async () => {
-    await expect(closeSessionTab('tab-1')).resolves.toBeUndefined();
-    await expect(navigateSessionTab('tab-1', 'back')).resolves.toBeUndefined();
-    await expect(reloadSessionTab('tab-1')).resolves.toBeUndefined();
+    await expect(closeSessionTab('tab-1')).resolves.toBeNull();
+    await expect(navigateSessionTab('tab-1', 'back')).resolves.toBeNull();
+    await expect(reloadSessionTab('tab-1')).resolves.toBeNull();
   });
 });
