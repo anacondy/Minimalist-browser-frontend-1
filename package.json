@@ -14,7 +14,8 @@
     "check": "npm run lint && npm run test && npm run build",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri:build": "tauri build",
+    "tauri:setup": "bash scripts/setup-arch.sh"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.11.1",

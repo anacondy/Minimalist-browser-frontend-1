@@ -74,24 +74,40 @@ npm run check      # lint + tests + production build  ← run before commit
 
 ## Desktop shell (Tauri v2) — Arch Linux
 
-One-time deps + Rust, then the app runs as a real native window
-(~3–10 MB ROM, ~40–80 MB RAM idle — small because it reuses the system
-WebKitGTK instead of bundling Chromium):
+> **Note:** the rebuilt app (package.json, `src/`, `src-tauri/`) lives on
+> branch **`arena/01a05408-minimalist-browser-frontend-1`** until PR #1 is
+> merged. Cloning `main` only gives the legacy drafts:
+>
+> ```bash
+> git clone -b arena/01a05408-minimalist-browser-frontend-1 \
+>   https://github.com/anacondy/Minimalist-browser-frontend-1.git
+> ```
+
+**Fastest path — one command** (installs deps, refreshes mirrors, installs
+Rust, runs npm install):
 
 ```bash
-# Arch / Manjaro system deps
-sudo pacman -Syu
+npm run tauri:setup      # = bash scripts/setup-arch.sh (Arch only)
+```
+
+Manual equivalent (Arch / Manjaro):
+
+```bash
+# Refreshing mirrors FIRST fixes "failed to retrieve file ... 404" errors
+sudo pacman -S --needed reflector
+sudo reflector --latest 20 --protocol https --sort rate --save /etc/pacman.d/mirrorlist
+sudo pacman -Syy
+
+# Tauri v2 system deps
 sudo pacman -S --needed webkit2gtk-4.1 base-devel curl wget file \
   openssl appmenu-gtk-module libappindicator-gtk3 librsvg xdotool
 
-# Rust toolchain
+# Rust (skip if already installed; then run: source ~/.cargo/env)
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-# restart your shell, then:
-rustup default stable
 
-# run / build
+# run / build (inside the repo with the branch checked out)
 npm install
-npm run tauri:dev     # native window with HMR
+npm run tauri:dev     # native window with HMR (first build: 5–10 min)
 npm run tauri:build   # deb / rpm / AppImage in src-tauri/target/release/bundle
 ```
 
