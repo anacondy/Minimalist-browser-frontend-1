@@ -15,8 +15,8 @@ use std::sync::Mutex;
 
 use serde::Serialize;
 use tauri::{
-    AppHandle, Emitter, Image, LogicalPosition, LogicalSize, Manager, State, Url, Webview,
-    WebviewBuilder, WebviewUrl, WindowEvent,
+    image::Image, AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, State, Url,
+    Webview, WebviewBuilder, WebviewUrl, WindowEvent,
 };
 
 /// Monotonic tab label counter — labels must be unique for the window's
@@ -89,7 +89,7 @@ impl TabManager {
     fn set_active(&self, label: Option<&str>) {
         let mut tabs = self.0.lock().unwrap();
         for tab in tabs.iter_mut() {
-            tab.active = Some(label) == Some(tab.label.as_str());
+            tab.active = label == Some(tab.label.as_str());
         }
     }
 }
@@ -143,7 +143,10 @@ fn relayout(app: &AppHandle) {
 }
 
 /// Register a child webview (a real tab) inside the main window.
-fn create_tab(app: &AppHandle, label: &str, url: Url, title: String) -> Result<Webview, String> {
+/// (`title` is stored in TabManager by the caller; the webview itself
+///  has no title property — the page's `document.title` comes back via
+///  `on_document_title_changed`.)
+fn create_tab(app: &AppHandle, label: &str, url: Url) -> Result<Webview, String> {
     let win = app
         .get_webview_window("main")
         .ok_or("main window missing")?;
@@ -221,7 +224,7 @@ fn open_tab(
     // Otherwise: new tab (child webview inside this same window).
     let n = TAB_SEQ.fetch_add(1, Ordering::Relaxed) + 1;
     let label = format!("tab-{n}");
-    create_tab(&app, &label, parsed, title.clone())?;
+    create_tab(&app, &label, parsed)?;
 
     {
         let mut tabs = state.0.lock().unwrap();
@@ -267,9 +270,11 @@ fn close_tab(app: AppHandle, state: State<'_, TabManager>, label: String) -> Res
         let mut tabs = state.0.lock().unwrap();
         tabs.retain(|t| t.label != label);
         if was_active {
-            if let Some(last) = tabs.last() {
+            // Clone the next-active label first (avoids holding an
+            // immutable borrow while iterating mutably).
+            if let Some(last) = tabs.last().map(|t| t.label.clone()) {
                 for tab in tabs.iter_mut() {
-                    tab.active = tab.label == last.label;
+                    tab.active = tab.label == last;
                 }
             }
         }
